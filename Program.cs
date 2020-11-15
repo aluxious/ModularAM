@@ -65,29 +65,30 @@ namespace ModularAM
 
                 int rowInserted = 0;
 
-                for (int i = totalDateWeb - totalStored - 1; i > 0; i--)
+                using (SqlConnection con = new SqlConnection(STR_CONNECTION))
                 {
-                    string date = new SelectElement(driver.FindElementById("drpArchival")).Options[i].Text.Trim();
-                    // Crawl data to insert database
-                    Console.WriteLine("Crawling data of date: " + date);
-                    var tmpSelect = new SelectElement(driver.FindElementById("drpArchival"));
-                    tmpSelect.SelectByText(date);
-                    for (int pages = 2; ; pages++)
+                    for (int i = totalDateWeb - totalStored - 1; i > 0; i--)
                     {
-                        IWebElement table = FindElementEx(driver, By.Id("grdFPISWH"), 5);
-                        if (table == null)
-                            Console.WriteLine("Table data not found");
-                        else
+                        string date = new SelectElement(driver.FindElementById("drpArchival")).Options[i].Text.Trim();
+                        // Crawl data to insert database
+                        Console.WriteLine("Crawling data of date: " + date);
+                        var tmpSelect = new SelectElement(driver.FindElementById("drpArchival"));
+                        tmpSelect.SelectByText(date);
+                        for (int pages = 2; ; pages++)
                         {
-                            var rows = table.FindElements(By.TagName("tr"));
-
-                            for (int r = 1; r < rows.Count; r++)
+                            IWebElement table = FindElementEx(driver, By.Id("grdFPISWH"), 5);
+                            if (table == null)
+                                Console.WriteLine("Table data not found");
+                            else
                             {
-                                var rowTds = rows[r].FindElements(By.TagName("td"));
-                                if (rowTds.Count == 5 && !rowTds[0].Text.Trim().Equals(""))
+                                var rows = table.FindElements(By.TagName("tr"));
+
+                                for (int r = 1; r < rows.Count; r++)
                                 {
-                                    using (SqlConnection con = new SqlConnection(STR_CONNECTION))
+                                    var rowTds = rows[r].FindElements(By.TagName("td"));
+                                    if (rowTds.Count == 5 && !rowTds[0].Text.Trim().Equals(""))
                                     {
+
                                         string saveData = "INSERT into secwise_holdings (cutoff_date, isin, security_description, indicative_value, outstanding_position, sec_holdings, crawled_time)" +
                                             " VALUES (@cutoff_date, @isin, @security_description, @indicative_value, @outstanding_position, @sec_holdings, @crawled_time)";
 
@@ -104,7 +105,9 @@ namespace ModularAM
                                             {
                                                 con.Open();
                                                 int recordsAffected = command.ExecuteNonQuery();
+#if DEBUG
                                                 Console.WriteLine("Inserted into database " + rowTds[0].Text.Trim());
+#endif
                                             }
                                             catch (SqlException ex)
                                             {
@@ -116,29 +119,29 @@ namespace ModularAM
                                                 con.Close();
                                             }
                                         }
+                                        rowInserted++;
                                     }
-                                    rowInserted++;
                                 }
                             }
-                        }
-                        Console.WriteLine("Rows inserted so far: " + rowInserted);
-
-                        // Load data from other pages
-                        try
-                        {
-                            var link = driver.FindElementByLinkText(pages.ToString());
-                            link.Click();
-                        }
-                        catch (NoSuchElementException)
-                        {
-                            // link does not exist
-                            break;
+                            // Load data from other pages
+                            try
+                            {
+                                var link = driver.FindElementByLinkText(pages.ToString());
+                                link.Click();
+                            }
+                            catch (NoSuchElementException)
+                            {
+                                // link does not exist
+                                break;
+                            }
                         }
                     }
                 }
+                Console.WriteLine("Total rows inserted: " + rowInserted);
             }
             catch (Exception ex)
             {
+                // TODO: log
                 throw ex;
             }
             finally
