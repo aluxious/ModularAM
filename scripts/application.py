@@ -21,21 +21,30 @@ with pyodbc.connect('DRIVER='+driver+';SERVER='+server+';PORT=1433;DATABASE='+da
             ISINS.append({'label': '' + str(row[0]) + '', 'value': '' + str(row[0]) + ''})
             row = cursor.fetchone()
 
-dash_app = dash.Dash()
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+
+dash_app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app = dash_app.server
 
 dash_app.layout = html.Div(children=[
     html.H1(children='Security Wise Holdings'),
 
-    html.Div(children='''
-        Daily Indicative Value Of Aggregate Holding of FPIS (INR CR#)
-    '''),
+    html.H4(children='Daily Indicative Value Of Aggregate Holding of FPIS (INR CR#)'),
 
-    dcc.Dropdown(
-        id='isins-dropdown',
-        options=ISINS,
-        value=''
-    ),
+    html.Table(children=[
+        html.Tr(children=[
+            html.Td(
+                html.Label('Select ISIN: ')
+            ),
+            html.Td(children=[
+                dcc.Dropdown(
+                    id='isins-dropdown',
+                    options=ISINS,
+                    value=''
+                )
+            ], style={'width': 200}),
+        ]),
+    ]),
     html.Div(id='dd-output-container')
 ])
 
